@@ -941,7 +941,8 @@
                         <p class="text-gray-400 mb-8">Déjanos tus datos y nos pondremos en contacto contigo.</p>
                     </div>
 
-                    <form id="contact-form" class="flex flex-col gap-4" novalidate>
+                    <form id="contact-form" class="flex flex-col gap-4" name="contacto_agencia" data-netlify="true" netlify-honeypot="website" method="POST" action="/?submitted=true" novalidate>
+                        <input type="hidden" name="form-name" value="contacto_agencia">
                         <!-- Honeypot anti-spam (invisible para humanos) -->
                         <div style="display:none" aria-hidden="true">
                             <input type="text" name="website" tabindex="-1" autocomplete="off">
@@ -1038,87 +1039,49 @@
                                 }
                             })();
 
-                            form.addEventListener('submit', function (e) {
-                                e.preventDefault();
-                                if (submitting) return;
-
-                                var btn = document.getElementById('cf-submit');
-                                var btnText = document.getElementById('cf-submit-text');
-                                var feedback = document.getElementById('form-feedback');
-
-                                var nombre = form.nombre.value.trim();
-                                var email = form.email.value.trim();
-                                var servicio = form.servicio.value;
-                                var mensaje = form.mensaje.value.trim();
-                                var honeypot = form.website ? form.website.value : '';
-
-                                if (honeypot) return;
-
-                                if (!nombre || !email || !servicio || !mensaje) {
-                                    showFeedback('Por favor completa todos los campos requeridos.', 'error');
-                                    return;
-                                }
-                                if (!isValidEmail(email)) {
-                                    showFeedback('Correo electrónico no válido.', 'error');
-                                    return;
-                                }
-
-                                submitting = true;
-                                btn.disabled = true;
-                                btn.style.opacity = '0.6';
-                                btnText.textContent = 'Enviando...';
-                                hideFeedback();
-
-                                var data = new FormData();
-                                data.append('nombre', nombre);
-                                data.append('email', email);
-                                data.append('telefono', form.telefono.value.trim());
-                                data.append('servicio', servicio);
-                                data.append('mensaje', mensaje);
-                                data.append('website', honeypot);
-
-                                fetch('send-mail.php', { method: 'POST', body: data })
-                                    .then(function (res) { return res.json(); })
-                                    .then(function (json) {
-                                        if (json.success) {
-                                            showFeedback('\u2705 \u00a1Mensaje enviado! Te contactaremos pronto.', 'success');
-                                            fbq('track', 'Contact'); // Meta Pixel: formulario enviado con éxito
-                                            window.dataLayer = window.dataLayer || [];
-                                            window.dataLayer.push({ 'event': 'contacto_exitoso' }); // GTM: evento AJAX
-                                            form.reset();
-                                        } else {
-                                            showFeedback(json.message || 'Error al enviar. Int\u00e9ntalo de nuevo.', 'error');
-                                        }
-                                    })
-                                    .catch(function () {
-                                        showFeedback('Error de red. Verifica tu conexi\u00f3n.', 'error');
-                                    })
-                                    .finally(function () {
-                                        submitting = false;
-                                        btn.disabled = false;
-                                        btn.style.opacity = '1';
-                                        btnText.textContent = 'ENVIAR MENSAJE';
-                                    });
-                            });
-
-                            function isValidEmail(email) {
-                                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-                            }
-                            function showFeedback(msg, type) {
-                                var el = document.getElementById('form-feedback');
-                                el.textContent = msg;
-                                el.style.display = 'block';
-                                el.style.background = type === 'success' ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
-                                el.style.border = type === 'success' ? '1px solid rgba(34,197,94,0.4)' : '1px solid rgba(239,68,68,0.4)';
-                                el.style.color = type === 'success' ? '#86efac' : '#fca5a5';
-                            }
-                            function hideFeedback() {
-                                var el = document.getElementById('form-feedback');
-                                el.style.display = 'none';
-                                el.textContent = '';
-                            }
+                            /* El envío se delega al mecanismo nativo del navegador para que Netlify Forms lo procese.
+                                   Se eliminó el manejador AJAX (fetch) y la prevención por defecto. */
                         })();
                     </script>
+                        <!-- Modal de agradecimiento (mostrado cuando ?submitted=true en la URL) -->
+                        <div id="thankyou-modal" style="display:none; position:fixed; inset:0; z-index:60; align-items:center; justify-content:center;">
+                            <div style="position:absolute; inset:0; background:rgba(0,0,0,0.6);"></div>
+                            <div role="dialog" aria-modal="true" aria-labelledby="thankyou-title" style="position:relative; max-width:480px; margin:0 auto; background:#0b0b0b; color:#fff; padding:28px; border-radius:12px; box-shadow:0 10px 40px rgba(2,6,23,0.6); z-index:70;">
+                                <h3 id="thankyou-title" style="margin:0 0 12px;font-size:1.25rem;">¡Gracias!</h3>
+                                <p style="margin:0 0 18px;color:#cbd5e1;">Hemos recibido tu mensaje. Nos pondremos en contacto contigo pronto.</p>
+                                <div style="text-align:right;">
+                                    <button id="thankyou-close" style="background:#fff;color:#000;padding:10px 16px;border-radius:8px;border:none;font-weight:700;cursor:pointer;">Cerrar</button>
+                                </div>
+                            </div>
+                        </div>
+                        <script>
+                            (function () {
+                                function showThankYou() {
+                                    var modal = document.getElementById('thankyou-modal');
+                                    if (!modal) return;
+                                    modal.style.display = 'flex';
+                                }
+                                function hideThankYou() {
+                                    var modal = document.getElementById('thankyou-modal');
+                                    if (!modal) return;
+                                    modal.style.display = 'none';
+                                }
+                                document.getElementById && document.addEventListener('DOMContentLoaded', function () {
+                                    try {
+                                        var params = new URLSearchParams(window.location.search);
+                                        if (params.get('submitted') === 'true') {
+                                            showThankYou();
+                                            // Limpiar la query para evitar remostrar al refrescar
+                                            params.delete('submitted');
+                                            var newUrl = window.location.pathname + (params.toString() ? '?' + params.toString() : '') + window.location.hash;
+                                            history.replaceState({}, document.title, newUrl);
+                                        }
+                                    } catch (e) { /* fallback silencioso */ }
+                                    var btn = document.getElementById('thankyou-close');
+                                    if (btn) btn.addEventListener('click', hideThankYou);
+                                });
+                            })();
+                        </script>
                 </div>
             </div>
         </section>
